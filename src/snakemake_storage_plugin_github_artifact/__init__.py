@@ -221,8 +221,11 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         #     redirect_url, headers=self._headers(accept="application/zip"), stream=True
         # )
         # extract file from zip and store under self.local_path()
-        with zipfile.ZipFile(res.raw) as zip_file:
-            zip_file.extractall(self.local_path(), [self.local_path().name])
+        with tempfile.TemporaryFile() as temp:
+            shutil.copyfileobj(res.raw, temp)
+            temp.seek(0)
+            with zipfile.ZipFile(temp) as zip_file:
+                zip_file.extractall(self.local_path(), [self.local_path().name])
 
     def _headers(
         self,
