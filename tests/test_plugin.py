@@ -5,8 +5,6 @@ from snakemake_interface_storage_plugins.storage_provider import StorageProvider
 from snakemake_interface_storage_plugins.settings import StorageProviderSettingsBase
 
 from snakemake_interface_storage_plugins.common import get_disk_free
-from pathlib import Path
-print(get_disk_free(Path("results/test.txt")))
 
 
 class TestStorage(TestStorageBase):

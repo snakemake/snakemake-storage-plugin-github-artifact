@@ -1,5 +1,5 @@
 [project]
-dependencies = [ "snakemake-interface-common>=1.22.0,<2", "snakemake-interface-storage-plugins>=4.3.2,<5", "requests>=2.32.5,<3",]
+dependencies = [ "snakemake-interface-common>=1.22.0,<2", "snakemake-interface-storage-plugins>=4.3.3,<5", "requests>=2.32.5,<3",]
 name = "snakemake-storage-plugin-github-artifact"
 requires-python = ">=3.11,<4.0"
 version = "0.1.0"
