@@ -269,7 +269,10 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     @retry_decorator
     def remove(self):
         # Remove the object from the storage.
-        pass
+        requests.delete(
+            f"https://api.github.com/repos/{self.provider.repo}/actions/artifacts/{self._artifact['id']}",
+            headers=self._headers(accept="application/vnd.github+json"),
+        )
 
     # The following to methods are only required if the class inherits from
     # StorageObjectGlob.

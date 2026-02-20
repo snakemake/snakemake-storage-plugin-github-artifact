@@ -10,7 +10,7 @@ class TestStorage(TestStorageBase):
     # set to True if the storage is read-only
     retrieve_only = False
     # set to True if the storage is write-only
-    store_only = True
+    store_only = False
     # set to False if the storage does not support deletion
     delete = False
     # set to True if the storage object implements support for touching (inherits from
