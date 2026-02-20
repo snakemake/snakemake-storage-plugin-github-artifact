@@ -1,4 +1,4 @@
-const { DefaultArtifactClient } = require('@actions/artifact');
+import { DefaultArtifactClient } from '@actions/artifact';
 
 const artifactClient = new DefaultArtifactClient();
 
