@@ -221,6 +221,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         #     redirect_url, headers=self._headers(accept="application/zip"), stream=True
         # )
         # extract file from zip and store under self.local_path()
+        print(res.content)
         assert res.content is not None
         with zipfile.ZipFile(res.raw) as zip_file:
             zip_file.extractall(self.local_path(), [self.local_path().name])
