@@ -202,7 +202,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     def store_object(self):
         # Ensure that the object is stored at the location specified by
         # self.local_path().
-        sp.run(["node", str(Path(__file__).parent / "store_object.js"), self.local_path(), self.artifact_name], check=True)
+        sp.run(["node", str(Path(__file__).parent / "store_object.js"), str(self.local_path()), str(self.local_path().parent), self.artifact_name], check=True)
         # res = requests.post(
         #     f"https://api.github.com/repos/{self.provider.repo}/actions/runs/{self.provider.run_id}/artifacts",
         #     headers=self._headers(accept="application/vnd.github+json"),
