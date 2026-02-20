@@ -39,6 +39,6 @@ features = [ "dev",]
 lint = "ruff check"
 format = "ruff format"
 typecheck = "pyrefly check"
-test = "pytest --cov=snakemake-storage-plugin-github-artifact --cov-report=xml:coverage-report/coverage.xml --cov-report=term-missing tests/test_plugin.py"
+test = "pytest --cov=snakemake_storage_plugin_github_artifact --cov-report=xml:coverage-report/coverage.xml --cov-report=term-missing tests/test_plugin.py"
 build = "python -m build"
 check-build = { cmd = "python -m twine check dist/*", depends-on = ["build"] }
