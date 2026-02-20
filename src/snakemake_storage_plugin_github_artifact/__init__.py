@@ -277,6 +277,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     @retry_decorator
     def remove(self):
         # Remove the object from the storage.
+        assert self._artifact is not None
         requests.delete(
             f"https://api.github.com/repos/{self.provider.repo}/actions/artifacts/{self._artifact['id']}",
             headers=self._headers(accept="application/vnd.github+json"),
