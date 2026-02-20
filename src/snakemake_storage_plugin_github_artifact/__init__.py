@@ -119,6 +119,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         self.path = parsed_query.netloc + parsed_query.path
         self.artifact_name = str(self.path).replace("/", "_")
         self.path = Path(self.path)
+        self._cache = None
 
     async def inventory(self, cache: IOCacheStorageInterface):
         """From this file, try to find as much existence and modification date
@@ -160,11 +161,10 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     @property
     def _artifact(self) -> Optional[Dict[str, Any]]:
         if self._cache is None:
-            artifacts = self._artifacts()
             matching = sorted(
                 (
                     artifact
-                    for artifact in artifacts["artifacts"]
+                    for artifact in self._artifacts["artifacts"]
                     if artifact["name"] == self.artifact_name
                 ),
                 key=lambda artifact: datetime.fromisoformat(artifact["updated_at"]),
