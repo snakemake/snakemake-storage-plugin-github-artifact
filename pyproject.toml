@@ -12,7 +12,7 @@ build-backend = "hatchling.build"
 requires = [ "hatchling",]
 
 [dependency-groups]
-dev = [ "ruff", "coverage", "pytest", "twine", "build",]
+dev = [ "ruff", "pytest", "twine", "build", "pytest-cov", "pyrefly"]
 
 [project.urls]
 Repository = "https://github.com/your/plugin"
