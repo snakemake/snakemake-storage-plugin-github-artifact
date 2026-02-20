@@ -51,6 +51,8 @@ jobs:
       - name: Setup pixi
         uses: prefix-dev/setup-pixi@v0
 
+      - run: npm i @actions/artifact
+
       - name: Run pytest
         run: pixi run test -vs
 
