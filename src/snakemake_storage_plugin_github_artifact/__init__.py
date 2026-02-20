@@ -112,15 +112,15 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     # For compatibility with future changes, you should not overwrite the __init__
     # method. Instead, use __post_init__ to set additional attributes and initialize
     # futher stuff.
+    provider: StorageProvider  # type: ignore
 
     def __post_init__(self):
         # This is optional and can be removed if not needed.
         # Alternatively, you can e.g. prepare a connection to your storage backend here.
         # and set additional attributes.
         parsed_query = urlparse(self.query)
-        self.path = parsed_query.netloc + parsed_query.path
+        self.path = Path(parsed_query.netloc + parsed_query.path)
         self.artifact_name = str(self.path).replace("/", "___")
-        self.path = Path(self.path)
         self._cache = None
 
     async def inventory(self, cache: IOCacheStorageInterface):
@@ -187,11 +187,13 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     @retry_decorator
     def mtime(self) -> float:
         # return the modification time
+        assert self._artifact is not None
         return datetime.fromisoformat(self._artifact["updated_at"]).timestamp()
 
     @retry_decorator
     def size(self) -> int:
         # return the size in bytes
+        assert self._artifact is not None
         return self._artifact["size_in_bytes"]
 
     @retry_decorator
@@ -207,33 +209,35 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         # On demand eligibility is calculated via Snakemake's access pattern annotation.
         # If no access pattern is annotated by the workflow developers,
         # self.is_ondemand_eligible is by default set to False.
-        download_url = self._artifact()["archive_download_url"]
+        assert self._artifact is not None
+        download_url = self._artifact["archive_download_url"]
         res = requests.get(
             download_url, headers=self._headers(accept="application/vnd.github+json")
         )
         res.raise_for_status()
-        redirect_url = res.header()["Location"]
+        redirect_url = res.headers["Location"]
         res = requests.get(
             redirect_url, headers=self._headers(accept="application/zip"), stream=True
         )
         # extract file from zip and store under self.local_path()
-        with zipfile.ZipFile(res.content) as zip_file:
+        assert res.content is not None
+        with zipfile.ZipFile(res.raw) as zip_file:
             zip_file.extractall(self.local_path(), [self.local_path().name])
 
     def _headers(
         self,
         accept: Optional[str] = None,
         content_type: Optional[str] = None,
-    ) -> Dict[str, str]:
-        accept = {"Accept": accept} if accept else {}
-        content_type = {"Content-Type": content_type} if content_type else {}
+    ) -> Dict[str, Any]:
+        accept_dict = {"Accept": accept} if accept else {}
+        content_type_dict = {"Content-Type": content_type} if content_type else {}
         return (
             {
                 "Authorization": f"Bearer {self.provider.token}",
                 "X-GitHub-Api-Version": "2022-11-28",
             }
-            | accept
-            | content_type
+            | accept_dict
+            | content_type_dict
         )
 
     # The following to methods are only required if the class inherits from
@@ -257,7 +261,9 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
                 stderr=sp.PIPE,
             )
         except sp.CalledProcessError as e:
-            raise WorkflowError(f"Failed to upload artifact: {e.stderr.decode()}") from e
+            raise WorkflowError(
+                f"Failed to upload artifact: {e.stderr.decode()}"
+            ) from e
         self._cache = None
 
     @retry_decorator
