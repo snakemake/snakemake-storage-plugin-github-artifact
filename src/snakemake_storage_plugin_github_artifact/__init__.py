@@ -215,6 +215,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
             download_url, headers=self._headers(accept="application/vnd.github+json")
         )
         res.raise_for_status()
+        print(res.headers)
         redirect_url = res.headers["Location"]
         res = requests.get(
             redirect_url, headers=self._headers(accept="application/zip"), stream=True
