@@ -4,6 +4,10 @@ from snakemake_interface_storage_plugins.tests import TestStorageBase
 from snakemake_interface_storage_plugins.storage_provider import StorageProviderBase
 from snakemake_interface_storage_plugins.settings import StorageProviderSettingsBase
 
+from snakemake_interface_storage_plugins.common import get_disk_free
+from pathlib import Path
+print(get_disk_free(Path("results/test.txt")))
+
 
 class TestStorage(TestStorageBase):
     __test__ = True
