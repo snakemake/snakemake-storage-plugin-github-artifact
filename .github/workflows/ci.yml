@@ -68,6 +68,8 @@ jobs:
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env['ACTIONS_RUNTIME_TOKEN'])
 
       - name: Run pytest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pixi run test -vs
 
       - name: Run Coverage
