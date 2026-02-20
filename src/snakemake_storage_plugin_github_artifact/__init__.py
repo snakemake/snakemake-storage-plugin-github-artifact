@@ -243,18 +243,21 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     def store_object(self):
         # Ensure that the object is stored at the location specified by
         # self.local_path().
-        sp.run(
-            [
-                "node",
-                str(Path(__file__).parent / "store_object.js"),
-                str(self.local_path()),
-                str(self.local_path().parent),
-                self.artifact_name,
-            ],
-            check=True,
-            stdout=sp.PIPE,
-            stderr=sp.STDOUT,
-        )
+        try:
+            sp.run(
+                [
+                    "node",
+                    str(Path(__file__).parent / "store_object.js"),
+                    str(self.local_path()),
+                    str(self.local_path().parent),
+                    self.artifact_name,
+                ],
+                check=True,
+                stdout=sp.STDERR,
+                stderr=sp.PIPE,
+            )
+        except sp.CalledProcessError as e:
+            raise WorkflowError(f"Failed to upload artifact: {e.stderr.decode()}") from e
         self._cache = None
 
     @retry_decorator
