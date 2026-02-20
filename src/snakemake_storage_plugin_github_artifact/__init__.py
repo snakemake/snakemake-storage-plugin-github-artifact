@@ -21,7 +21,6 @@ from snakemake_interface_storage_plugins.storage_provider import (  # noqa
 from snakemake_interface_storage_plugins.storage_object import (
     StorageObjectRead,
     StorageObjectWrite,
-    StorageObjectGlob,
     retry_decorator,
 )
 from snakemake_interface_storage_plugins.io import IOCacheStorageInterface
@@ -110,7 +109,7 @@ class StorageProvider(StorageProviderBase):
 # from the list of inherited items.
 # Inside of the object, you can use self.provider to access the provider (e.g. for )
 # self.provider.logger, see above, or self.provider.settings).
-class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
+class StorageObject(StorageObjectRead, StorageObjectWrite):
     # For compatibility with future changes, you should not overwrite the __init__
     # method. Instead, use __post_init__ to set additional attributes and initialize
     # futher stuff.
@@ -163,7 +162,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         return res.json()
 
     @property
-    def _artifact(self) -> Optional[Dict[str, Any]]:
+    def _maybe_artifact(self) -> Optional[Dict[str, Any]]:
         if self._cache is None:
             matching = sorted(
                 (
@@ -178,24 +177,27 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
                 self._cache = matching[0]
         return self._cache
 
+    @property
+    def _artifact(self) -> Dict[str, Any]:
+        assert self._maybe_artifact is not None
+        return self._maybe_artifact
+
     # Fallible methods should implement some retry logic.
     # The easiest way to do this (but not the only one) is to use the retry_decorator
     # provided by snakemake-interface-storage-plugins.
     @retry_decorator
     def exists(self) -> bool:
         # return True if the object exists
-        return self._artifact is not None
+        return self._maybe_artifact is not None
 
     @retry_decorator
     def mtime(self) -> float:
         # return the modification time
-        assert self._artifact is not None
         return datetime.fromisoformat(self._artifact["updated_at"]).timestamp()
 
     @retry_decorator
     def size(self) -> int:
         # return the size in bytes
-        assert self._artifact is not None
         return self._artifact["size_in_bytes"]
 
     @retry_decorator
@@ -211,7 +213,6 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         # On demand eligibility is calculated via Snakemake's access pattern annotation.
         # If no access pattern is annotated by the workflow developers,
         # self.is_ondemand_eligible is by default set to False.
-        assert self._artifact is not None
         download_url = self._artifact["archive_download_url"]
         res = requests.get(
             download_url,
@@ -277,20 +278,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     @retry_decorator
     def remove(self):
         # Remove the object from the storage.
-        assert self._artifact is not None
         requests.delete(
             f"https://api.github.com/repos/{self.provider.repo}/actions/artifacts/{self._artifact['id']}",
             headers=self._headers(accept="application/vnd.github+json"),
         )
-
-    # The following to methods are only required if the class inherits from
-    # StorageObjectGlob.
-
-    @retry_decorator
-    def list_candidate_matches(self) -> Iterable[str]:
-        """Return a list of candidate matches in the storage for the query."""
-        # This is used by glob_wildcards() to find matches for wildcards in the query.
-        # The method has to return concretized queries without any remaining wildcards.
-        # Use snakemake_executor_plugins.io.get_constant_prefix(self.query) to get the
-        # prefix of the query before the first wildcard.
-        return []
