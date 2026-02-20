@@ -151,7 +151,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     @property
     def _artifacts(self) -> Dict[str, Any]:
         res = requests.get(
-            "https://api.github.com/repos/{self.provider.repo}/actions/artifacts",
+            f"https://api.github.com/repos/{self.provider.repo}/actions/artifacts",
             headers=self._headers(accept="application/vnd.github+json"),
         )
         res.raise_for_status()
