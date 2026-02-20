@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import Dict
-import io
+import datetime
 import zipfile
 from urllib.parse import urlparse
 from typing import Any, Iterable, Optional, List
@@ -148,23 +148,49 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         # Snakemake.
         pass
 
+    @property
+    def _artifacts(self) -> Dict[str, Any]:
+        res = requests.get(
+            "https://api.github.com/repos/{self.provider.repo}/actions/artifacts",
+            headers=self._headers(accept="application/vnd.github+json"),
+        )
+        res.raise_for_status()
+        return res.json()
+
+    @property
+    def _artifact(self) -> Optional[Dict[str, Any]]:
+        if self._cache is None:
+            artifacts = self._artifacts()
+            matching = sorted(
+                (
+                    artifact
+                    for artifact in artifacts["artifacts"]
+                    if artifact["name"] == self.artifact_name
+                ),
+                key=lambda artifact: datetime.fromisoformat(artifact["updated_at"]),
+                reverse=True,
+            )
+            if matching:
+                self._cache = matching[0]
+        return self._cache
+
     # Fallible methods should implement some retry logic.
     # The easiest way to do this (but not the only one) is to use the retry_decorator
     # provided by snakemake-interface-storage-plugins.
     @retry_decorator
     def exists(self) -> bool:
         # return True if the object exists
-        return False
+        return self._artifact is not None
 
     @retry_decorator
     def mtime(self) -> float:
         # return the modification time
-        return 0.0
+        return datetime.fromisoformat(self._artifact["updated_at"]).timestamp()
 
     @retry_decorator
     def size(self) -> int:
         # return the size in bytes
-        return 0
+        return self._artifact["size_in_bytes"]
 
     @retry_decorator
     def retrieve_object(self):
@@ -179,16 +205,29 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         # On demand eligibility is calculated via Snakemake's access pattern annotation.
         # If no access pattern is annotated by the workflow developers,
         # self.is_ondemand_eligible is by default set to False.
-        pass
+        download_url = self._artifact()["archive_download_url"]
+        res = requests.get(
+            download_url, headers=self._headers(accept="application/vnd.github+json")
+        )
+        res.raise_for_status()
+        redirect_url = res.header()["Location"]
+        res = requests.get(
+            redirect_url, headers=self._headers(accept="application/zip"), stream=True
+        )
+        # extract file from zip and store under self.local_path()
+        with zipfile.ZipFile(res.content) as zip_file:
+            zip_file.extractall(self.local_path(), [self.local_path().name])
 
     def _headers(
-        self, accept: Optional[str] = None, content_type: Optional[str] = None, use_runtime_token: bool = False
+        self,
+        accept: Optional[str] = None,
+        content_type: Optional[str] = None,
     ) -> Dict[str, str]:
         accept = {"Accept": accept} if accept else {}
         content_type = {"Content-Type": content_type} if content_type else {}
         return (
             {
-                "Authorization": f"Bearer {self.provider.runtime_token if use_runtime_token else self.provider.token}",
+                "Authorization": f"Bearer {self.provider.token}",
                 "X-GitHub-Api-Version": "2022-11-28",
             }
             | accept
@@ -202,28 +241,17 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     def store_object(self):
         # Ensure that the object is stored at the location specified by
         # self.local_path().
-        sp.run(["node", str(Path(__file__).parent / "store_object.js"), str(self.local_path()), str(self.local_path().parent), self.artifact_name], check=True)
-        # res = requests.post(
-        #     f"https://api.github.com/repos/{self.provider.repo}/actions/runs/{self.provider.run_id}/artifacts",
-        #     headers=self._headers(accept="application/vnd.github+json"),
-        #     json={
-        #         "name": self.artifact_name,
-        #     },
-        # )
-        # res.raise_for_status()
-        # artifact = res.json()
-        # upload_url = artifact["archive_upload_url"]
-        # buffer = io.BytesIO()
-        # with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as z:
-        #     z.write(self.local_path())
-        # buffer.seek(0)
-
-        # res = requests.put(
-        #     upload_url,
-        #     headers=self._headers(content_type="application/zip"),
-        #     data=buffer.read(),
-        # )
-        # res.raise_for_status()
+        sp.run(
+            [
+                "node",
+                str(Path(__file__).parent / "store_object.js"),
+                str(self.local_path()),
+                str(self.local_path().parent),
+                self.artifact_name,
+            ],
+            check=True,
+        )
+        self._cache = None
 
     @retry_decorator
     def remove(self):
