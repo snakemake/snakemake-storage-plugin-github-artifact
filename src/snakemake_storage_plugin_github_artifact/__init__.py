@@ -1,7 +1,13 @@
-from dataclasses import dataclass, field
+import os
+from pathlib import Path
+from typing import Dict
+import io
+import zipfile
 from urllib.parse import urlparse
 from typing import Any, Iterable, Optional, List
-from snakemake_interface_storage_plugins.settings import StorageProviderSettingsBase
+
+import requests
+
 from snakemake_interface_storage_plugins.storage_provider import (  # noqa
     StorageProviderBase,
     StorageQueryValidationResult,
@@ -20,8 +26,6 @@ from snakemake_interface_storage_plugins.io import IOCacheStorageInterface
 # Raise errors that will not be handled within this plugin but thrown upwards to
 # Snakemake and the user as WorkflowError.
 from snakemake_interface_common.exceptions import WorkflowError  # noqa
-
-from github import Github, Auth
 
 
 # Required:
@@ -49,9 +53,7 @@ class StorageProvider(StorageProviderBase):
     def example_queries(cls) -> List[ExampleQuery]:
         """Return an example queries with description for this storage provider (at
         least one)."""
-        ExampleQuery(
-            query="gh://results/data.txt"
-        )
+        ExampleQuery(query="gh://results/data.txt")
 
     def rate_limiter_key(self, query: str, operation: Operation) -> Any:
         """Return a key for identifying a rate limiter given a query and an operation.
@@ -66,7 +68,6 @@ class StorageProvider(StorageProviderBase):
         """Return the default maximum number of requests per second for this storage
         provider."""
         return 0.25
-
 
     def use_rate_limiter(self) -> bool:
         """Return False if no rate limiting is needed for this provider."""
@@ -86,7 +87,7 @@ class StorageProvider(StorageProviderBase):
                 valid=False,
                 query=query,
                 reason="Query does not start with gh:// or does not "
-                "contain a path to a file or directory."
+                "contain a path to a file or directory.",
             )
 
 
@@ -172,13 +173,19 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         # self.is_ondemand_eligible is by default set to False.
         pass
 
-    def _headers(self, accept: Optional[str] = None, content_type: Optional[str] = None) -> Dict[str, str]:
-        accept = {"Accept": accept } if accept else {}
+    def _headers(
+        self, accept: Optional[str] = None, content_type: Optional[str] = None
+    ) -> Dict[str, str]:
+        accept = {"Accept": accept} if accept else {}
         content_type = {"Content-Type": content_type} if content_type else {}
-        return {
-            "Authorization": f"Bearer {self.provider.token}",
-            "X-GitHub-Api-Version": "2022-11-28",
-        } | accept | content_type
+        return (
+            {
+                "Authorization": f"Bearer {self.provider.token}",
+                "X-GitHub-Api-Version": "2022-11-28",
+            }
+            | accept
+            | content_type
+        )
 
     # The following to methods are only required if the class inherits from
     # StorageObjectReadWrite.
@@ -192,7 +199,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
             headers=self._headers(accept="application/vnd.github+json"),
             json={
                 "name": self.artifact_name,
-            }
+            },
         )
         res.raise_for_status()
         artifact = res.json()
@@ -202,12 +209,12 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
             z.write(self.local_path())
         buffer.seek(0)
 
-        requests.put(
+        res = requests.put(
             upload_url,
             headers=self._headers(content_type="application/zip"),
             data=buffer.read(),
         )
-        upload_response.raise_for_status()
+        res.raise_for_status()
 
     @retry_decorator
     def remove(self):
