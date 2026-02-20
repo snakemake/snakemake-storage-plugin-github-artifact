@@ -253,7 +253,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
                     self.artifact_name,
                 ],
                 check=True,
-                stdout=sp.STDERR,
+                stdout=sp.PIPE,
                 stderr=sp.PIPE,
             )
         except sp.CalledProcessError as e:
