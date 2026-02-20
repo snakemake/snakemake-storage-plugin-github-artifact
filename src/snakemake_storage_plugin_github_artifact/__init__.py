@@ -5,6 +5,7 @@ import io
 import zipfile
 from urllib.parse import urlparse
 from typing import Any, Iterable, Optional, List
+import subprocess as sp
 
 import requests
 
@@ -47,6 +48,8 @@ class StorageProvider(StorageProviderBase):
         # Alternatively, you can e.g. prepare a connection to your storage backend here.
         # and set additional attributes.
         self.token = os.getenv("GITHUB_TOKEN")
+        self.runtime_token = os.getenv("ACTIONS_RUNTIME_TOKEN")
+        self.runtime_url = os.getenv("ACTIONS_RUNTIME_URL")
         self.run_id = os.getenv("GITHUB_RUN_ID")
         self.repo = os.getenv("GITHUB_REPOSITORY")
 
@@ -179,13 +182,13 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         pass
 
     def _headers(
-        self, accept: Optional[str] = None, content_type: Optional[str] = None
+        self, accept: Optional[str] = None, content_type: Optional[str] = None, use_runtime_token: bool = False
     ) -> Dict[str, str]:
         accept = {"Accept": accept} if accept else {}
         content_type = {"Content-Type": content_type} if content_type else {}
         return (
             {
-                "Authorization": f"Bearer {self.provider.token}",
+                "Authorization": f"Bearer {self.provider.runtime_token if use_runtime_token else self.provider.token}",
                 "X-GitHub-Api-Version": "2022-11-28",
             }
             | accept
@@ -199,27 +202,28 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     def store_object(self):
         # Ensure that the object is stored at the location specified by
         # self.local_path().
-        res = requests.post(
-            f"https://api.github.com/repos/{self.provider.repo}/actions/runs/{self.provider.run_id}/artifacts",
-            headers=self._headers(accept="application/vnd.github+json"),
-            json={
-                "name": self.artifact_name,
-            },
-        )
-        res.raise_for_status()
-        artifact = res.json()
-        upload_url = artifact["archive_upload_url"]
-        buffer = io.BytesIO()
-        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as z:
-            z.write(self.local_path())
-        buffer.seek(0)
+        sp.run(["node", str(Path(__file__).parent / "store_object.js"), self.local_path(), self.artifact_name], check=True)
+        # res = requests.post(
+        #     f"https://api.github.com/repos/{self.provider.repo}/actions/runs/{self.provider.run_id}/artifacts",
+        #     headers=self._headers(accept="application/vnd.github+json"),
+        #     json={
+        #         "name": self.artifact_name,
+        #     },
+        # )
+        # res.raise_for_status()
+        # artifact = res.json()
+        # upload_url = artifact["archive_upload_url"]
+        # buffer = io.BytesIO()
+        # with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as z:
+        #     z.write(self.local_path())
+        # buffer.seek(0)
 
-        res = requests.put(
-            upload_url,
-            headers=self._headers(content_type="application/zip"),
-            data=buffer.read(),
-        )
-        res.raise_for_status()
+        # res = requests.put(
+        #     upload_url,
+        #     headers=self._headers(content_type="application/zip"),
+        #     data=buffer.read(),
+        # )
+        # res.raise_for_status()
 
     @retry_decorator
     def remove(self):
