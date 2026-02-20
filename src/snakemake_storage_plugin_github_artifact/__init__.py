@@ -119,7 +119,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         # and set additional attributes.
         parsed_query = urlparse(self.query)
         self.path = parsed_query.netloc + parsed_query.path
-        self.artifact_name = str(self.path).replace("/", "_")
+        self.artifact_name = str(self.path)#.replace("/", "_")
         self.path = Path(self.path)
         self._cache = None
 
@@ -252,6 +252,8 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
                 self.artifact_name,
             ],
             check=True,
+            stdout=sp.PIPE,
+            stderr=sp.STDOUT,
         )
         self._cache = None
 
