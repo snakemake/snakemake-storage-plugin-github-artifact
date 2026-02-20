@@ -13,6 +13,7 @@ from snakemake_interface_storage_plugins.storage_provider import (  # noqa
     StorageQueryValidationResult,
     ExampleQuery,
     Operation,
+    QueryType,
 )
 from snakemake_interface_storage_plugins.storage_object import (
     StorageObjectRead,
@@ -53,7 +54,11 @@ class StorageProvider(StorageProviderBase):
     def example_queries(cls) -> List[ExampleQuery]:
         """Return an example queries with description for this storage provider (at
         least one)."""
-        ExampleQuery(query="gh://results/data.txt")
+        ExampleQuery(
+            query="gh://results/data.txt",
+            type=QueryType.ANY,
+            description="A file or directory stored as a github actions artifact",
+        )
 
     def rate_limiter_key(self, query: str, operation: Operation) -> Any:
         """Return a key for identifying a rate limiter given a query and an operation.

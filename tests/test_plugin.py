@@ -4,8 +4,6 @@ from snakemake_interface_storage_plugins.tests import TestStorageBase
 from snakemake_interface_storage_plugins.storage_provider import StorageProviderBase
 from snakemake_interface_storage_plugins.settings import StorageProviderSettingsBase
 
-from snakemake_interface_storage_plugins.common import get_disk_free
-
 
 class TestStorage(TestStorageBase):
     __test__ = True
