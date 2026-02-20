@@ -212,7 +212,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         assert self._artifact is not None
         download_url = self._artifact["archive_download_url"]
         res = requests.get(
-            download_url, headers=self._headers(accept="application/vnd.github+json")
+            f"https://api.github.com/repos/{self.provider.repo}/actions/artifacts/{self._artifact['id']}/zip", headers=self._headers(accept="application/vnd.github+json")
         )
         res.raise_for_status()
         print(res.headers)
