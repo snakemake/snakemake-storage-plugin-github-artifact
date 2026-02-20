@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import Dict
-import datetime
+from datetime import datetime
 import zipfile
 from urllib.parse import urlparse
 from typing import Any, Iterable, Optional, List
@@ -88,7 +88,7 @@ class StorageProvider(StorageProviderBase):
         # and considered valid. The wildcards will be resolved before the storage
         # object is actually used.
         parsed = urlparse(query)
-        if parsed.schema == "gh" and parsed.netloc and parsed.path:
+        if parsed.scheme == "gh" and parsed.netloc and parsed.path:
             return StorageQueryValidationResult(valid=True, query=query)
         else:
             return StorageQueryValidationResult(
