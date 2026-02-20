@@ -212,14 +212,14 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         assert self._artifact is not None
         download_url = self._artifact["archive_download_url"]
         res = requests.get(
-            f"https://api.github.com/repos/{self.provider.repo}/actions/artifacts/{self._artifact['id']}/zip", headers=self._headers(accept="application/vnd.github+json")
+            download_url, headers=self._headers()
         )
         res.raise_for_status()
-        print(res.headers)
-        redirect_url = res.headers["Location"]
-        res = requests.get(
-            redirect_url, headers=self._headers(accept="application/zip"), stream=True
-        )
+        # print(res.headers)
+        # redirect_url = res.headers["Location"]
+        # res = requests.get(
+        #     redirect_url, headers=self._headers(accept="application/zip"), stream=True
+        # )
         # extract file from zip and store under self.local_path()
         assert res.content is not None
         with zipfile.ZipFile(res.raw) as zip_file:
