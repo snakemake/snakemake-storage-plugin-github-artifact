@@ -4,7 +4,7 @@ from typing import Dict
 from datetime import datetime
 import zipfile
 from urllib.parse import urlparse
-from typing import Any, Iterable, Optional, List
+from typing import Any, Optional, List
 import subprocess as sp
 import tempfile
 import shutil
